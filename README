@@ -1,0 +1,20 @@
+# Program Overview
+
+db.c, db.h : contains functions for main database operation functions, such as query, add, and delete. 
+fine-grained locking is implemented for each step of these functions to create thread-safe operations.
+Head is locked and unlocked according to the lock type.
+Each node is also locked and unlocked depending on the condiion of the function call.
+
+server.c: contains functions and structs for maintaining multi-threaded connections. 
+
+client.c, comm.c, comm.h: support codes for creating the client REPL to connect to the server.
+
+scripts: example database test scripts.
+
+# Known Bugs
+
+none so far.
+
+# Debugging Collaborators
+
+N/A

@@ -1,0 +1,54 @@
+Questions
+
+1. Consider the thread created in start_listener. How many threads with this functionality should be running on the server at any given time?
+
+When the start_listener is called, the server is connect to a new client's port. In other words, one start_listener call corresponds to a new thread. Therefore, at any given time, the number of threads running on the server should be equal to the number of ports, or the number of clients running on the server.
+
+2. In the listener function, what do each of the following fields of the sockaddr_in struct represent: sin_family, sin_port, and sin_addr.s_addr?
+
+sin_family: a parameter for the address family. An address family represents the format of IP address that this socket is going to use. This parameter is always set to AF_INET (considering most networking functions in Linux based systems).
+
+sin_port: the port number of this internet connection. htons() converts the unsigned short integer (the comm_port variable, which is set through the start_listener method from host byte order to network byte order, and this value is set as sin_port.
+
+sin_addr.s_addr: sin_addr is the IP host address. s_addr the contains this address in network byte order. In other words, for this database, the IP address for the host is equal to the IP address of the machine that runs the server of the database.
+
+3. What is the purpose of each of the following function calls in listener: socket, bind, listen, and accept? You should explain what each call does and what the effect would be if it were not called.
+
+socket:
+creates a new socket.
+parameters: the address family (explained above)
+            socket type (SOCK_STREAM for TCP connection(this database), SOCK_DGRAM for UDP connection)
+            protocol (set to 0 for this database)
+returns: a file descriptor, which is used for all of following functions as a reference to this socket. Thus, the following functions(bind, listen, and accept) will not be able to be called properly without the correct reference for this socket.
+
+bind:
+connects the newly created socket to the address (for this database, connects the address of the server).
+parameters: the socket file descriptor
+            address to bind this socket (for this database, the pointer to sockaddr_in struct explained above)
+            the byte size of the address
+returns: 0 if bind was successful, -1 if not. A successful bind has to be checked to make sure that the listening task can be correctly forwarded to the desired address (the server address).
+
+listen:
+listens to the connected address through this socket.
+parameters: socket file descriptor
+            size of the backlog queue. TCP creates a queue of pending connections for multiple threads, and handles the requests one by one.
+returns: 0 if listening process is built successfully, -1 if not. Listen thus has to be called to make sure that multiple threads can be connected after the connection of this socket is successfully established.
+
+accept:
+waits for a successful connection of the client to the server. (another reason why listen has to be called, since this waiting process solely depends on the listen's functionality).
+parameters: socket file descriptor
+            pointer to the address of the client
+            byte size of this address
+returns: a file descriptor of the client's connection to the server. Thus, this function call is required for any further communication processes, which are handled using this file descriptor.
+
+4. Which protocol (TCP or UDP) is used for communication? Why is this protocol used? (Hint: see line 35 in comm.c)
+
+This database uses TCP. While UDP is process-to-process communication, TCP is host-to-host communicatoin. In this case of database, TCP is based on client-to-client, or thread-to-thread, or socket-to-socket connection. In other words, once a connection is successfully made for a socket, we can guarantee for awhile that any operations on this database through this client can be successfully handled. Vice versa, if there is an issue with a connection with this client, then the server can manage the faulty operations from this client easily. TCP thus fits better to maximize the reliability of the database operation.
+
+5. Describe what comm_serve does. How are the response and command parameters used? What would happen if the stream pointed to by cxstr were closed?
+
+comm_serve basically writes the the two strings (response and command) into the stream file called cxstr. The response string is copied to the cxstr file and uses it to perform error checking on the response. The command string is cut to BUFLEN and then copied to the stream file. Thus, both actions will not be performed if the cxstr stream file is closed.
+
+6. Describe, in detail, what happens during each iteration of the while loop in the listener function. Be sure to include explanations of all significant function calls.
+
+As explained above, the listen call creates a backlog queue of certain size. The while loop essentially handles each process in this backlog by each iteration. In other words, for each item in the backlog queue, an accept function is called to successfully connect the client to the server, and uses this client's file descriptor to connect to the stream file (cxstr). Then, using this input stream file uniquely connected to each client, the server is called. This process will keep going on until an error occurs, or the backlog queue is full.
